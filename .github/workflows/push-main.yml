@@ -1,0 +1,107 @@
+name: Publish
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - images/**
+      - scripts/discover-images.py
+      - .github/workflows/push-main.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+jobs:
+  discover:
+    name: Discover images
+    runs-on: ubuntu-latest
+    outputs:
+      images: ${{ steps.images.outputs.images }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+
+      - name: Read images from Dockerfiles
+        id: images
+        run: echo "images=$(python3 scripts/discover-images.py)" >> "$GITHUB_OUTPUT"
+
+  publish:
+    name: Publish ${{ matrix.image.name }}
+    needs: discover
+    runs-on: ubuntu-latest
+    environment: production
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ${{ fromJSON(needs.discover.outputs.images) }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5
+
+      - name: Log in to GHCR
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish image
+        id: build
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf
+        with:
+          context: ${{ matrix.image.context }}
+          target: final
+          pull: true
+          push: true
+          tags: ghcr.io/msilabben/${{ matrix.image.name }}:${{ matrix.image.version }}
+          labels: |
+            org.opencontainers.image.title=${{ matrix.image.name }}-wrapper
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.version=${{ matrix.image.version }}
+          provenance: true
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6
+
+      - name: Generate image SBOM
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610
+        with:
+          image: ghcr.io/msilabben/${{ matrix.image.name }}@${{ steps.build.outputs.digest }}
+          format: spdx-json
+          output-file: sbom-${{ matrix.image.name }}.spdx.json
+          upload-artifact: false
+
+      - name: Sign published image digest
+        run: cosign sign --yes ghcr.io/msilabben/${{ matrix.image.name }}@${{ steps.build.outputs.digest }}
+
+      - name: Attest image SBOM
+        run: |
+          cosign attest \
+            --yes \
+            --predicate sbom-${{ matrix.image.name }}.spdx.json \
+            --type spdxjson \
+            ghcr.io/msilabben/${{ matrix.image.name }}@${{ steps.build.outputs.digest }}
+
+      - name: Write publish summary
+        run: |
+          {
+            echo "### Published image"
+            echo
+            echo "| Field | Value |"
+            echo "| --- | --- |"
+            echo "| Image | ghcr.io/msilabben/${{ matrix.image.name }} |"
+            echo "| Tag | ${{ matrix.image.version }} |"
+            echo "| Digest | ${{ steps.build.outputs.digest }} |"
+            echo "| Pinned reference | ghcr.io/msilabben/${{ matrix.image.name }}@${{ steps.build.outputs.digest }} |"
+            echo "| Upstream image | ${{ matrix.image.upstream }} |"
+            echo "| Source directory | ${{ matrix.image.context }} |"
+            echo "| SBOM | attached as a signed Cosign attestation |"
+          } >> "$GITHUB_STEP_SUMMARY"

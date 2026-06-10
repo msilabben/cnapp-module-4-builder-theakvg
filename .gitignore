@@ -1,0 +1,5 @@
+artifacts/
+*.log
+.DS_Store
+.idea/
+
