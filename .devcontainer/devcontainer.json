@@ -15,5 +15,5 @@
       ]
     }
   },
-  "postCreateCommand": "cosign version && gh --version"
+  "postCreateCommand": "cosign version && grype version && gh --version"
 }
