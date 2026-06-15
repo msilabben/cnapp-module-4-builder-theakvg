@@ -61,7 +61,7 @@ jobs:
           target: final
           pull: true
           push: true
-          tags: ghcr.io/msilabben/${{ matrix.image.name }}:${{ matrix.image.version }}
+          tags: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}/${{ matrix.image.name }}:${{ matrix.image.version }}
           labels: |
             org.opencontainers.image.title=${{ matrix.image.name }}-wrapper
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
@@ -74,13 +74,13 @@ jobs:
       - name: Generate image SBOM
         uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610
         with:
-          image: ghcr.io/msilabben/${{ matrix.image.name }}@${{ steps.build.outputs.digest }}
+          image: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}/${{ matrix.image.name }}@${{ steps.build.outputs.digest }}
           format: spdx-json
           output-file: sbom-${{ matrix.image.name }}.spdx.json
           upload-artifact: false
 
       - name: Sign published image digest
-        run: cosign sign --yes ghcr.io/msilabben/${{ matrix.image.name }}@${{ steps.build.outputs.digest }}
+        run: cosign sign --yes ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}/${{ matrix.image.name }}@${{ steps.build.outputs.digest }}
 
       - name: Attest image SBOM
         run: |
@@ -88,7 +88,7 @@ jobs:
             --yes \
             --predicate sbom-${{ matrix.image.name }}.spdx.json \
             --type spdxjson \
-            ghcr.io/msilabben/${{ matrix.image.name }}@${{ steps.build.outputs.digest }}
+            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}/${{ matrix.image.name }}@${{ steps.build.outputs.digest }}
 
       - name: Write publish summary
         run: |
@@ -97,10 +97,10 @@ jobs:
             echo
             echo "| Field | Value |"
             echo "| --- | --- |"
-            echo "| Image | ghcr.io/msilabben/${{ matrix.image.name }} |"
+            echo "| Image | ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}/${{ matrix.image.name }} |"
             echo "| Tag | ${{ matrix.image.version }} |"
             echo "| Digest | ${{ steps.build.outputs.digest }} |"
-            echo "| Pinned reference | ghcr.io/msilabben/${{ matrix.image.name }}@${{ steps.build.outputs.digest }} |"
+            echo "| Pinned reference | ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}/${{ matrix.image.name }}@${{ steps.build.outputs.digest }} |"
             echo "| Upstream image | ${{ matrix.image.upstream }} |"
             echo "| Source directory | ${{ matrix.image.context }} |"
             echo "| SBOM | attached as a signed Cosign attestation |"
