@@ -1,6 +1,5 @@
-# Workshop - modul 4: supply chain security 
+# Workshop - modul 4: software supply chain security 
 
-Temaet for denne workshoppen er sikker kode og pipeline herding. Vi skal gå gjennom tre temaer: utviklingsmiljø, pipeline og git repository. Det vil være oppgaver knyttet til hver av disse temaene.
 
 Krav: 
 - GitHub bruker
@@ -10,10 +9,7 @@ Krav:
 ### Oppsett
 1. Gi GitHub brukernavnet til fasilitator, slik at dere kan bli invitert til organisasjonen. 
 2. Godkjenn invitasjonen
-3. Gå til [cnapp-module](https://github.com/msilabben/cnapp-module)
-4. Klikk på "Fork" inne på cnapp-module repoet, oppe til høyre
-5. Velg organisasjonen som eier.
-6. Trykk på "<> Code", og enten clone ned repoet lokalt på maskinen din eller trykk på headeren "Codespaces" og velg "Create codespace on main". 
+3. Gå til [msilabben](https://github.com/msilabben)
 
 
 Si ifra til fasilitator hvis dere møter på problemer. 
